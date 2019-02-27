@@ -9,6 +9,7 @@ public:
 	
 	int getUserID();
 	void setUserID(int id);
+	friend bool operator< (const User &left, const User &right);
 	User();
 	~User();
 };

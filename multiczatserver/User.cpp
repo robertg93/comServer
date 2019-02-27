@@ -20,3 +20,8 @@ User::User()
 User::~User()
 {
 }
+
+bool operator<(const User & left, const User & right)
+{
+	return left.userID < right.userID;
+}
