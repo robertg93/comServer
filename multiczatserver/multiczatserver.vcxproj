@@ -152,6 +152,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CServer.h" />
     <ClInclude Include="Message.h" />
     <ClInclude Include="MessageReciver.h" />
     <ClInclude Include="Messagesender.h" />
@@ -159,6 +160,7 @@
     <ClInclude Include="User.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CServer.cpp" />
     <ClCompile Include="Message.cpp" />
     <ClCompile Include="MessageReciver.cpp" />
     <ClCompile Include="Messagesender.cpp" />
