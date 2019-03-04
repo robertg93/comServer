@@ -1,4 +1,6 @@
 #pragma once
+#include "CCommunicator.h"
+#include <string>
 class Message
 {
 	friend class CCommunicator;

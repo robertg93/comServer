@@ -1,4 +1,22 @@
 #pragma once
+
+#include "Message.h"
+#include <map>
+#include <iostream>
+#include <string>
+#include <set>
+#include <stdio.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+
+
+#pragma comment(lib, "Ws2_32.lib")
+
+#define PORT 9034
+#define DEFAULT_MESSAGE_LEN 256
+#define DEFAULT_RECV_FLAG 0
+
 class CCommunicator
 {
 private:
