@@ -19,10 +19,12 @@ private:
 	char buf[256]; // buffor for incoming data 
 	int nbytes = 0;
 	int yes = 1; // for setsockopt() SO_REUSEADDR, patrz ni¿ej
+	int currentFiledscp = 0;
 
 	int i = 0, j = 0;
 
 	std::set<int> userss;
+	std::set<int> descriptorSet;
 	std::map<int, int> userssFD;
 public:
 

@@ -87,19 +87,13 @@ void CCommunicator::connectionHandling()
 		}
 
 		// przejdü przez obecne po≥πczenia szukajπc danych do odczytania
-		for (i = 0; i <= fdmax; i++) {
-			if (FD_ISSET(i, &read_fds)) { // iteracja po deskryptorach w read_fds
-				//add new connection
-				if (i == listener)
-				{
-					handleNewConnection();
-
-				}
-				// existing connection 
-				else
-				{
-					handleExistnigConnection();
-				}
+		for (i = 0; i <= fdmax; i++)
+		{
+			 currentFiledscp = i;
+			if (FD_ISSET(currentFiledscp, &read_fds))  // iteracja po deskryptorach w read_fds
+			{
+				if (currentFiledscp == listener)  handleNewConnection();		    //add new connection
+				else handleExistnigConnection();									// existing connection 
 			}
 		}
 	}
@@ -108,125 +102,79 @@ void CCommunicator::connectionHandling()
 void CCommunicator::handleNewConnection()
 {
 	// handle new connection
-	std::cout << "here 2 " << std::endl;
+	std::cout << "adding new user... " << std::endl;
 	addrlen = sizeof(remoteaddr);
 	newfiledescriptor = accept(listener, (struct sockaddr *) & remoteaddr, &addrlen);
 
 	if (newfiledescriptor == INVALID_SOCKET) // if accept failed
 	{
-		std::cout << "here 3 " << std::endl;
 		perror("accept");
 	}
 	else // if accept returns new descriptor
 	{
-		std::cout << "here 4 " << std::endl;
+		std::cout << "new user " << std::endl;
 		// add to user list
-
-		if ((recv(newfiledescriptor, buf, 256, 0)) > 0) //if recv returned > 0
+		Message message;
+		if (message.receive(newfiledescriptor) > 0) //if recv returned > 0
 		{
 			// get user id
-			Message newMessage;
-
-			std::string temp = "";
-			int userID;
-			for (int n = 1; n < 7; n++)
-			{
-				temp = temp + buf[n];
-			}
-			userID = stoi(temp);
-
-			if (userss.count(userID) == 0)
-			{
-				userss.insert(userID);
-				userssFD.insert(std::pair<int, int>(userID, newfiledescriptor));
-			}
-
+			int userID = message.senderID;
+			if (userss.count(userID) == 0) { userss.insert(userID); }    //add user to set 
+			userssFD.insert(std::pair<int, int>(userID, newfiledescriptor)); // add pair (user,fd) to map
+			
 		}
-		else //if recv failed
-		{
-			perror("recv");
-		}
-		FD_SET(newfiledescriptor, &master); // add to main set
-		if (newfiledescriptor > fdmax)  // follow max
+		else {perror("recv");}					// if recv failed
+		
+		descriptorSet.insert(newfiledescriptor);
+		FD_SET(newfiledescriptor, &master);				// add to main set
+		if (newfiledescriptor > fdmax)				 // follow max
 		{
 			fdmax = newfiledescriptor;
 		}
-
 	}
 }
 
 void CCommunicator::handleExistnigConnection()
 {
-	std::cout << "here 5 " << std::endl;
+	std::cout << "destination choice " << std::endl;
 	// handle data from client
-
-
+	
 	Message newMessage;
+	newMessage.receive(currentFiledscp);
 
-	nbytes = recv(i, buf, 256, 0);
-
-	newMessage.massageType = buf[0];
-	newMessage.receivedBytes = nbytes;
-	std::string temp = "";
-	for (int k = 1; k < 7; k++) { temp = temp + buf[k]; }
-	newMessage.senderID = stoi(temp);
-	temp = "";
-	for (int k = 7; k < 13; k++) { temp = temp + buf[k]; }
-	newMessage.receiverID = stoi(temp);
-	temp = "";
-	for (int k = 13; k < nbytes; k++) { temp = temp + buf[k]; }
-	newMessage.data = temp;
-
-	if (nbytes <= 0)
+	if (newMessage.receivedBytes <= 0)
 	{
 		// error
-		if (nbytes == 0) {
+		if (newMessage.receivedBytes== 0) {
 			// connection lost
-			printf("selectserver: socket %d hung up\n", i);
+			printf("selectserver: socket %d hung up\n", currentFiledscp);
 		}
 		else {
 			perror("recv");
 		}
-		closesocket(i); // papa!
-		FD_CLR(i, &master); // remove from main set
+		closesocket(currentFiledscp); // papa!
+		FD_CLR(currentFiledscp, &master); // remove from main set
+		userssFD.erase(newMessage.senderID);
 	}
 	else {
-		std::cout << "tu jestem 6 " << std::endl;
+		std::cout << "senging... " << std::endl;
 		// some data from client
-
-		if (buf[0] == '2') //to certein user
+		
+		if (newMessage.massageType == 2) //to certein user
 		{
-
-			std::string temp = "";
-			for (int i = 7; i < 13; i++)
-			{
-				temp = temp + buf[i];
-			}
-			destfd = userssFD[stoi(temp)];
-			if (send(destfd, buf, nbytes, 0) == -1) {
+			destfd = userssFD[newMessage.receiverID];
+			if (newMessage.sendMsg(destfd) == -1) {
 				perror("send");
 			}
-			std::cout << "here 7 " << std::endl;
+			std::cout << "msg was send " << std::endl;
 		}
 		else
-		{
-			for (j = 0; j <= fdmax; j++) {
-				// for all
-				if (FD_ISSET(j, &master)) {
-
-
-					// without as and server
-					if (j != listener && j != i) {
-						if (send(j, buf, nbytes, 0) == -1) {
-							perror("send");
-						}
-						std::cout << "tu jestem 8 " << std::endl;
-					}
-
-
-				}
+		{	// for all
+			for (auto iter = descriptorSet.begin(); iter != descriptorSet.end(); ++iter)
+			{
+				if (*iter != currentFiledscp && *iter != listener) newMessage.sendMsg(*iter);
 			}
-		}
 
+		}
 	}
 }
