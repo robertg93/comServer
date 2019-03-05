@@ -12,6 +12,7 @@ protected:
 	int receiverID;
 	std::string data;
 public:
+
 	int receive(int newDscp);
 	int sendMsg(int userDscp);
 	Message();

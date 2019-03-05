@@ -6,6 +6,7 @@
 #include <string>
 #include <set>
 #include <stdio.h>
+#include <vector>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
@@ -16,6 +17,7 @@
 #define PORT 9034
 #define DEFAULT_MESSAGE_LEN 256
 #define DEFAULT_RECV_FLAG 0
+class Message;
 
 class CCommunicator
 {
@@ -44,6 +46,7 @@ private:
 	std::set<int> userss;
 	std::set<int> descriptorSet;
 	std::map<int, int> userssFD;
+	std::map<int, std::vector<Message>> notSentMessages;
 public:
 
 	~CCommunicator();

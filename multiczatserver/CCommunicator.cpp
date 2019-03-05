@@ -122,6 +122,15 @@ void CCommunicator::handleNewConnection()
 			if (userss.count(userID) == 0) { userss.insert(userID); }    //add user to set 
 			userssFD.insert(std::pair<int, int>(userID, newfiledescriptor)); // add pair (user,fd) to map
 			
+			if (notSentMessages.count(message.senderID) == 1)
+			{
+				for (auto iter = notSentMessages[message.senderID].begin(); iter != notSentMessages[message.senderID].end(); ++iter)
+				{
+					iter->sendMsg(newfiledescriptor);
+				}
+				notSentMessages.erase(message.senderID);
+			}
+
 		}
 		else {perror("recv");}					// if recv failed
 		
@@ -163,10 +172,24 @@ void CCommunicator::handleExistnigConnection()
 		if (newMessage.massageType == 2) //to certein user
 		{
 			destfd = userssFD[newMessage.receiverID];
+			
 			if (newMessage.sendMsg(destfd) == -1) {
 				perror("send");
+				//int userid = newMessage.receiverID;
+				if(notSentMessages.count(newMessage.receiverID) == 0)
+				{
+					std::vector<Message> msgVec;
+					msgVec.push_back(newMessage);
+					notSentMessages.insert(std::pair<int, std::vector<Message>>(newMessage.receiverID, msgVec));
+				}
+				else 
+				{
+					notSentMessages[newMessage.receiverID].push_back(newMessage);
+				}
+				std::cout << notSentMessages[newMessage.receiverID][0].data << std::endl;
 			}
-			std::cout << "msg was send " << std::endl;
+			else std::cout << "msg was send " << std::endl;
+			
 		}
 		else
 		{	// for all

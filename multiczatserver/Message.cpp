@@ -2,6 +2,8 @@
 #include "Message.h"
 
 
+
+
 int Message::receive(int newDscp)
 {
 	char buf[256];
@@ -48,6 +50,7 @@ int Message::sendMsg(int userDscp)
 	char * msg = new char[sendBytes];
 	for (int n=0; n < sendBytes; n++) {	msg[n] = this->data[n]; }
 	int result = send(userDscp, msg, sendBytes , 0);
+	std::cout << result << std::endl;
 	delete[] msg;
 	return result;
 }
