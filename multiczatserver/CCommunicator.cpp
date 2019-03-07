@@ -114,7 +114,7 @@ void CCommunicator::connectionHandling()
 			std::string exception;
 			std::cout << "waiting for action " << std::endl;
 			read_fds = master; // copy it
-			if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) throw(exception = " WSAStartup failed");
+			if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) throw(exception = " select failed");
 
 			// przejdŸ przez obecne po³¹czenia szukaj¹c danych do odczytania
 			for (i = 0; i <= fdmax; i++)
@@ -197,10 +197,13 @@ void CCommunicator::handleExistnigConnection()
 		std::string exception;
 		// error
 		if (newMessage.receivedBytes== 0) { throw(exception = " socket hang up"); }
-		else { throw(exception = " receive error"); }
-		closesocket(currentFiledscp); // papa!
-		FD_CLR(currentFiledscp, &master); // remove from main set
-		//userssFD.erase(newMessage.senderID);
+		else {
+			closesocket(currentFiledscp); // papa!
+			FD_CLR(currentFiledscp, &master); // remove from main set
+			//userssFD.erase(newMessage.senderID);
+			throw(exception = " user has closed connection");
+		}
+		
 	}
 	else {
 		std::cout << "senging... " << std::endl;
