@@ -13,10 +13,60 @@ CCommunicator::~CCommunicator()
 	s_ptrComObject = nullptr;
 }
 
-CCommunicator* CCommunicator::run()
+CCommunicator* CCommunicator::createObject()
 {
 	if (s_ptrComObject == nullptr) { new CCommunicator(); }
+
 	return s_ptrComObject;
+}
+
+void CCommunicator::run()
+{
+	//try to start connection
+	bool tryFlag = true;
+	while (tryFlag)
+	{
+		tryFlag = false;
+		try
+		{
+			CCommunicator::startConnection();
+		}
+		catch (std::string info)
+		{
+			std::cout << info << std::endl;
+			tryFlag = true;
+		}
+		catch (...)
+		{
+			std::cout << "other error" << std::endl;
+			tryFlag = true;
+		}
+
+	}
+	//try connection handling
+	tryFlag = true;
+	while (tryFlag)
+	{
+		tryFlag = false;
+		try
+		{
+			CCommunicator::connectionHandling();
+		}
+		catch (std::string info)
+		{
+			std::cout << info << std::endl;
+			tryFlag = true;
+		}
+		catch (...)
+		{
+			std::cout << "other error" << std::endl;
+			tryFlag = true;
+		}
+
+	}
+
+	
+	
 }
 
 
@@ -25,46 +75,26 @@ void CCommunicator::startConnection()
 {
 	FD_ZERO(&master); // clear main and additional set
 	FD_ZERO(&read_fds);
-
 	WSADATA wsaData;
+	std::string exception;
 
-	int iResult;
 	// initialize WINSOCK
-	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-	if (iResult != 0)
-	{
-		printf(" WSAStartup failed");
-		//return 1;
-	}
-
-
+	if ((WSAStartup(MAKEWORD(2, 2), &wsaData) == -1)) throw(exception = " WSAStartup failed");
+	
 	// creatr listening socket
-	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		perror("socket");
-		exit(1);
-	}
+	if ((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) throw(exception = " Socket error");
 
 	//skip the error "address already in use"
-	if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof(int)) == -1) {
-		perror("setsockopt");
-		exit(1);
-	}
+	if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof(int)) == -1)throw(exception = " setsockopt error");
 
 	// bind
 	myaddr.sin_family = AF_INET;
 	myaddr.sin_addr.s_addr = INADDR_ANY;
 	myaddr.sin_port = htons(PORT);
 	memset(&(myaddr.sin_zero), '\0', 8);
-	if (bind(listener, (struct sockaddr *) & myaddr, sizeof(myaddr)) == -1) {
-		perror("bind");
-		exit(1);
-	}
-
+	if (bind(listener, (struct sockaddr *) & myaddr, sizeof(myaddr)) == -1) throw(exception = " bind error");
 	// listen
-	if (listen(listener, 10) == -1) {
-		perror("listen");
-		exit(1);
-	}
+	if (listen(listener, 10) == -1)throw(exception = " listen error");
 
 	// add to main set 
 	FD_SET(listener, &master);
@@ -77,39 +107,42 @@ void CCommunicator::connectionHandling()
 {
 	std::cout << "main loop " << std::endl;
 	// main loop
-	while (true)
+	try 
 	{
-		std::cout << "waiting for action " << std::endl;
-		read_fds = master; // copy it
-		if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
-			perror("select");
-			exit(1);
-		}
-
-		// przejdŸ przez obecne po³¹czenia szukaj¹c danych do odczytania
-		for (i = 0; i <= fdmax; i++)
+		while (true)
 		{
-			 currentFiledscp = i;
-			if (FD_ISSET(currentFiledscp, &read_fds))  // iteracja po deskryptorach w read_fds
+			std::string exception;
+			std::cout << "waiting for action " << std::endl;
+			read_fds = master; // copy it
+			if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) throw(exception = " WSAStartup failed");
+
+			// przejdŸ przez obecne po³¹czenia szukaj¹c danych do odczytania
+			for (i = 0; i <= fdmax; i++)
 			{
-				if (currentFiledscp == listener)  handleNewConnection();		    //add new connection
-				else handleExistnigConnection();									// existing connection 
+				currentFiledscp = i;
+				if (FD_ISSET(currentFiledscp, &read_fds))  // iteracja po deskryptorach w read_fds
+				{
+					if (currentFiledscp == listener)  handleNewConnection();		    //add new connection
+					else handleExistnigConnection();									// existing connection 
+				}
 			}
 		}
+	}
+	catch (...)
+	{
+		throw;
 	}
 }
 
 void CCommunicator::handleNewConnection()
 {
 	// handle new connection
+	std::string exception;
 	std::cout << "adding new user... " << std::endl;
 	addrlen = sizeof(remoteaddr);
 	newfiledescriptor = accept(listener, (struct sockaddr *) & remoteaddr, &addrlen);
-
-	if (newfiledescriptor == INVALID_SOCKET) // if accept failed
-	{
-		perror("accept");
-	}
+	// if accept failed
+	if (newfiledescriptor == INVALID_SOCKET) { throw(exception = " invalid socket"); }
 	else // if accept returns new descriptor
 	{
 		std::cout << "new user " << std::endl;
@@ -119,8 +152,16 @@ void CCommunicator::handleNewConnection()
 		{
 			// get user id
 			int userID = message.senderID;
-			if (userss.count(userID) == 0) { userss.insert(userID); }    //add user to set 
-			userssFD.insert(std::pair<int, int>(userID, newfiledescriptor)); // add pair (user,fd) to map
+			if (userss.count(userID) == 0)  //add user to set 
+			{
+				userss.insert(userID);
+				userssFD.insert(std::pair<int, int>(userID, newfiledescriptor));
+			}   
+			else
+			{
+				userssFD[userID] = newfiledescriptor;
+			}
+			 // add pair (user,fd) to map
 			
 			if (notSentMessages.count(message.senderID) == 1)
 			{
@@ -132,7 +173,7 @@ void CCommunicator::handleNewConnection()
 			}
 
 		}
-		else {perror("recv");}					// if recv failed
+		else { throw(exception = " receive error"); }					// if recv failed
 		
 		descriptorSet.insert(newfiledescriptor);
 		FD_SET(newfiledescriptor, &master);				// add to main set
@@ -153,26 +194,20 @@ void CCommunicator::handleExistnigConnection()
 
 	if (newMessage.receivedBytes <= 0)
 	{
+		std::string exception;
 		// error
-		if (newMessage.receivedBytes== 0) {
-			// connection lost
-			printf("selectserver: socket %d hung up\n", currentFiledscp);
-		}
-		else {
-			perror("recv");
-		}
+		if (newMessage.receivedBytes== 0) { throw(exception = " socket hang up"); }
+		else { throw(exception = " receive error"); }
 		closesocket(currentFiledscp); // papa!
 		FD_CLR(currentFiledscp, &master); // remove from main set
-		userssFD.erase(newMessage.senderID);
+		//userssFD.erase(newMessage.senderID);
 	}
 	else {
 		std::cout << "senging... " << std::endl;
 		// some data from client
-		
 		if (newMessage.massageType == 2) //to certein user
 		{
 			destfd = userssFD[newMessage.receiverID];
-			
 			if (newMessage.sendMsg(destfd) == -1) {
 				perror("send");
 				//int userid = newMessage.receiverID;
@@ -197,7 +232,6 @@ void CCommunicator::handleExistnigConnection()
 			{
 				if (*iter != currentFiledscp && *iter != listener) newMessage.sendMsg(*iter);
 			}
-
 		}
 	}
 }

@@ -51,7 +51,8 @@ public:
 
 	~CCommunicator();
 
-	static CCommunicator* run();
+	static CCommunicator* createObject();
+	void run();
 	void startConnection();
 	void connectionHandling();
 	void handleNewConnection();
