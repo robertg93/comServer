@@ -147,11 +147,12 @@ void CCommunicator::handleNewConnection()
 	{
 		std::cout << "new user " << std::endl;
 		// add to user list
-		Message message;
-		if (message.receive(newfiledescriptor) > 0) //if recv returned > 0
+		std::unique_ptr<Message> ptrMessage(new Message());
+
+		if (ptrMessage->receive(newfiledescriptor) > 0) //if recv returned > 0
 		{
 			// get user id
-			int userID = message.senderID;
+			int userID = ptrMessage->senderID;
 			if (userss.count(userID) == 0)  //add user to set 
 			{
 				userss.insert(userID);
@@ -163,13 +164,13 @@ void CCommunicator::handleNewConnection()
 			}
 			 // add pair (user,fd) to map
 			
-			if (notSentMessages.count(message.senderID) == 1)
+			if (notSentMessages.count(ptrMessage->senderID) == 1)
 			{
-				for (auto iter = notSentMessages[message.senderID].begin(); iter != notSentMessages[message.senderID].end(); ++iter)
+				for (auto iter = notSentMessages[ptrMessage->senderID].begin(); iter != notSentMessages[ptrMessage->senderID].end(); ++iter)
 				{
 					iter->sendMsg(newfiledescriptor);
 				}
-				notSentMessages.erase(message.senderID);
+				notSentMessages.erase(ptrMessage->senderID);
 			}
 
 		}
@@ -189,14 +190,14 @@ void CCommunicator::handleExistnigConnection()
 	std::cout << "destination choice " << std::endl;
 	// handle data from client
 	
-	Message newMessage;
-	newMessage.receive(currentFiledscp);
+	std::unique_ptr<Message> ptrMessage(new Message());
+	ptrMessage->receive(currentFiledscp);
 
-	if (newMessage.receivedBytes <= 0)
+	if (ptrMessage->receivedBytes <= 0)
 	{
 		std::string exception;
 		// error
-		if (newMessage.receivedBytes== 0) { throw(exception = " socket hang up"); }
+		if (ptrMessage->receivedBytes== 0) { throw(exception = " socket hang up"); }
 		else {
 			closesocket(currentFiledscp); // papa!
 			FD_CLR(currentFiledscp, &master); // remove from main set
@@ -208,23 +209,23 @@ void CCommunicator::handleExistnigConnection()
 	else {
 		std::cout << "senging... " << std::endl;
 		// some data from client
-		if (newMessage.massageType == 2) //to certein user
+		if (ptrMessage->massageType == 2) //to certein user
 		{
-			destfd = userssFD[newMessage.receiverID];
-			if (newMessage.sendMsg(destfd) == -1) {
+			destfd = userssFD[ptrMessage->receiverID];
+			if (ptrMessage->sendMsg(destfd) == -1) {
 				perror("send");
 				//int userid = newMessage.receiverID;
-				if(notSentMessages.count(newMessage.receiverID) == 0)
+				if(notSentMessages.count(ptrMessage->receiverID) == 0)
 				{
 					std::vector<Message> msgVec;
-					msgVec.push_back(newMessage);
-					notSentMessages.insert(std::pair<int, std::vector<Message>>(newMessage.receiverID, msgVec));
+					msgVec.push_back(*ptrMessage);
+					notSentMessages.insert(std::pair<int, std::vector<Message>>(ptrMessage->receiverID, msgVec));
 				}
 				else 
 				{
-					notSentMessages[newMessage.receiverID].push_back(newMessage);
+					notSentMessages[ptrMessage->receiverID].push_back(*ptrMessage);
 				}
-				std::cout << notSentMessages[newMessage.receiverID][0].data << std::endl;
+				std::cout << notSentMessages[ptrMessage->receiverID][0].data << std::endl;
 			}
 			else std::cout << "msg was send " << std::endl;
 			
@@ -233,7 +234,7 @@ void CCommunicator::handleExistnigConnection()
 		{	// for all
 			for (auto iter = descriptorSet.begin(); iter != descriptorSet.end(); ++iter)
 			{
-				if (*iter != currentFiledscp && *iter != listener) newMessage.sendMsg(*iter);
+				if (*iter != currentFiledscp && *iter != listener) ptrMessage->sendMsg(*iter);
 			}
 		}
 	}
