@@ -45,7 +45,18 @@ int Message::receive(int newDscp)
 
 int Message::sendMsg(int userDscp)
 {
-	
+	//prepare msg for all
+	if (this->massageType == 1)
+	{
+		std::string temp = std::to_string(this->massageType) + std::to_string(this->senderID) + this->data;
+		this->data = temp;
+	}
+	//prepare msg for certain user
+	if (this->massageType == 2)
+	{
+		std::string temp = std::to_string(this->massageType) + std::to_string(this->senderID) + this->data;
+		this->data = temp;
+	}
 	int sendBytes = this->data.size();
 	char * msg = new char[sendBytes];
 	for (int n=0; n < sendBytes; n++) {	msg[n] = this->data[n]; }
